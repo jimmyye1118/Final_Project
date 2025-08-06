@@ -6,6 +6,7 @@ import signal
 from flask import Flask
 from flask_socketio import SocketIO
 
+from function.voice_recognizer import VoiceRecognizer
 from function.dobot_controller import DobotController
 from function.vision_processor import VisionProcessor
 from function.audio_controller import AudioController
@@ -19,6 +20,7 @@ dobot = DobotController()
 vision = VisionProcessor()
 audio = AudioController()
 counter = ObjectCounter(socketio)
+voice_recognizer = VoiceRecognizer() # 初始化語音辨識模組
 
 # 控制變數
 running = True
@@ -127,6 +129,51 @@ def handle_control(data):
     elif command == 'stop':
         flag_start_work = False
         print("Finish")
+
+@socketio.on('Recorder_control')
+def handle_recorder_control(data):
+    global voice_recognizer, flag_start_work
+    command = data.get('command')
+    print(f"收到語音錄音指令: {command}")
+
+    if command == 'voice_start_record':
+        voice_recognizer.start_recording()
+        # 語音開始錄音時，前端會更新狀態，後端不需要額外回傳
+    elif command == 'voice_stop_record':
+        # recognized_command = voice_recognizer.stop_recording()
+        recognized_command, recognized_text = voice_recognizer.stop_recording()
+        if recognized_command:
+            # 如果辨識成功，將結果回傳給前端
+            socketio.emit('voice_status', {'text': f'辨識結果: {recognized_text}', 'command': recognized_command})
+            print(f"語音辨識結果: {recognized_command}") #接收指令為keyword_action 右邊。
+
+            # 根據語音辨識結果執行動作
+            if recognized_command == 'start':
+                flag_start_work = True
+                print("語音指令：啟動工作")
+                audio.speak("開始工作") # 可以加入語音回饋
+            elif recognized_command == 'stop':
+                flag_start_work = False
+                print("語音指令：停止工作")
+                audio.speak("工作已停止") # 可以加入語音回饋
+            elif recognized_command in ['red', 'blue', 'yellow', 'green']:
+                # 這裡可以根據顏色指令執行機械手臂的特定動作
+                print(f"語音指令: 執行 {recognized_command} 色分類動作")
+                audio.speak(f"已收到{recognized_command}色指令")
+                # dobot.dobot_work(..., recognized_command, ...)
+                # 注意：這裡僅為範例，實際執行動作需要物件資訊
+            else:
+                print(f"語音指令 {recognized_command} 未對應到預設動作")
+                audio.speak("指令無法理解")
+        else:
+            # 如果沒有辨識到有效指令，回傳訊息給前端
+            socketio.emit('voice_status', {'text': '未辨識到有效指令'})
+            print("語音辨識：未辨識到有效指令")
+            audio.speak("沒有聽清楚，請再說一次")
+    else:
+        print(f"⚠️ 無效的 Recorder_control 指令：{command}")
+
+
 
 @socketio.on('connect')
 def on_connect():

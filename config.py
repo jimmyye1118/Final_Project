@@ -5,7 +5,7 @@ X_Center = 321
 Y_Center = 255
 
 # 影像編號
-Video_num = 1  # 修改為 0，測試是否正確
+Video_num = 0  # 修改為 0，測試是否正確
 # 亮度調整參數 0.1(暗)---0.9(亮)
 Gamma_Value = 0.6
 

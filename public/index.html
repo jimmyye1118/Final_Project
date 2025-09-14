@@ -17,171 +17,100 @@
     .page { display:none; }
     .page.active { display:block; }
     .highlight-oval { display:inline-block; background-color:#ffe066; border-radius:50px; padding:.5rem 1.5rem; box-shadow:0 0 10px rgba(0,0,0,0.2); margin-bottom:2rem; text-align:center; }
+   
   </style>
 </head>
 <body>
-  <!-- 導覽列 -->
-  <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow">
-    <div class="container-fluid">
-      <a class="navbar-brand" href="#"><i class="bi bi-robot me-2"></i><strong>機械手臂控制系統</strong></a>
-      <ul class="navbar-nav ms-auto">
-        <li class="nav-item"><a class="nav-link active" href="#" onclick="showPage('home')">首頁</a></li>
-        <li class="nav-item"><a class="nav-link" href="#" onclick="showPage('system')">系統</a></li>
-        <li class="nav-item"><a class="nav-link" href="#" onclick="showPage('system1')">統計分析</a></li>
-      </ul>
-    </div>
-  </nav>
-  <!-- 導覽列尾 -->
+ <!-- 導覽列 -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow">
+  <div class="container-fluid justify-content-center">
+    <a class="navbar-brand me-5" href="#"><i class="bi bi-robot me-2"></i><strong>機械手臂控制系統</strong></a>
+    <ul class="navbar-nav d-flex flex-row">
+      <li class="nav-item mx-2">
+        <a class="nav-link active" href="#" onclick="showPage('home')">首頁</a>
+      </li>
+      <li class="nav-item mx-2">
+        <a class="nav-link" href="#" onclick="showPage('system')">系統</a>
+      </li>
+      <li class="nav-item mx-2">
+        <a class="nav-link" href="#" onclick="showPage('system1')">語音分析</a>
+      </li>
+    </ul>
+  </div>
+</nav>
 
 
-  <div class="container mt-4">
-    <!-- 首頁 -->
-    <div id="home" class="page active container py-5">
-      <div class="text-center mb-5">
-        <h1 class="display-5 fw-bold text-primary mb-3">
-          歡迎使用機械手臂控制系統
-        </h1>
-        <p class="lead text-secondary">
-          本系統可即時顯示影像、統計各類物件數量，並透過按鈕遠端控制機械手臂運作。
-        </p>
-      </div>
-
-      <div class="row text-center">
-        <!-- 1. 即時影像 -->
-        <div class="col-md-4 mb-4">
-          <a href="#" class="text-decoration-none" onclick="showPage('system')">
-            <div class="card h-100 shadow-sm hover-shadow">
-              <div class="card-body">
-                <i class="bi bi-camera-video display-4 text-primary mb-3"></i>
-                <h5 class="card-title">即時影像顯示</h5>
-                <p class="card-text text-muted">清楚呈現即時監控畫面，便於追蹤作業情況。</p>
-              </div>
-            </div>
-          </a>
+   
+<div class="container mt-4">
+  <!-- 首頁 -->
+  <div id="home" class="page active p-5 bg-light rounded-4 shadow text-center">
+    <h1 class="mb-4 fw-bold text-primary">歡迎使用機械手臂控制系統</h1>
+    <p class="lead mb-4">本系統可即時顯示影像、統計各類物件數量，並透過按鈕遠端控制機械手臂運作。</p>
+    <div class="row justify-content-center">
+      <div class="col-md-6">
+        <div class="p-3 mb-3 bg-white rounded-3 shadow-sm border">
+          <h3 class="text-dark"><i class="bi bi-camera-video-fill me-2 text-secondary"></i>即時影像顯示</h3>
         </div>
-
-        <!-- 2. 物件辨識 -->
-        <div class="col-md-4 mb-4">
-          <a href="#" class="text-decoration-none" onclick="showPage('system1')">
-            <div class="card h-100 shadow-sm hover-shadow">
-              <div class="card-body">
-                <i class="bi bi-bar-chart-line display-4 text-success mb-3"></i>
-                <h5 class="card-title">物件自動辨識與統計</h5>
-                <p class="card-text text-muted">智慧化分析與分類辨識，大幅提升效率。</p>
-              </div>
-            </div>
-          </a>
+        <div class="p-3 mb-3 bg-white rounded-3 shadow-sm border">
+          <h3 class="text-dark"><i class="bi bi-bar-chart-line-fill me-2 text-secondary"></i>物件自動辨識與統計</h3>
         </div>
-
-        <!-- 3. 控制功能 -->
-        <div class="col-md-4 mb-4">
-          <a href="#" class="text-decoration-none" onclick="howPage('system')">
-            <div class="card h-100 shadow-sm hover-shadow">
-              <div class="card-body">
-                <i class="bi bi-cpu display-4 text-danger mb-3"></i>
-                <h5 class="card-title">啟動與停止機械手臂</h5>
-                <p class="card-text text-muted">遠端控制機械手臂運作，支援即時命令。</p>
-              </div>
-            </div>
-          </a>
+        <div class="p-3 bg-white rounded-3 shadow-sm border">
+          <h3 class="text-dark"><i class="bi bi-cpu-fill me-2 text-secondary"></i>啟動與停止機械手臂</h3>
         </div>
       </div>
     </div>
-
-    <!-- 首頁尾 -->
+  </div>
+</div>
 
 
     <!-- 系統頁面 -->
-    <div id="system" class="page container py-5">
-      <!-- 標題 -->
-      <div class="text-center mb-5">
-        <div class="bg-light rounded-pill d-inline-block px-4 py-2 shadow-sm">
-          <h1 class="m-0 text-primary"><i class="bi bi-gear-fill me-2"></i>控制系統介面</h1>
+    <div id="system" class="page">
+      <div class="text-center">
+        <div class="highlight-oval"><h1 class="m-0">控制系統介面</h1></div>
+      </div>
+      <div class="row mb-4">
+        <div class="col-md-8">
+          <h3>即時影像</h3>
+          <img id="video-feed" src="" alt="攝影機影像">
+        </div>
+        <div class="col-md-4">
+          <h3>系統控制</h3>
+          <button id="startBtn" class="btn btn-success mb-3">啟動</button>
+          <button id="stopBtn" class="btn btn-danger mb-3">停止</button>
+          <h3>物件統計</h3>
+          <table class="table table-bordered">
+            <thead class="table-secondary"><tr><th>類型</th><th>數量</th></tr></thead>
+            <tbody id="object-counts">
+              <tr><td>紅色</td><td id="red-count">0</td></tr>
+              <tr><td>藍色</td><td id="blue-count">0</td></tr>
+              <tr><td>黃色</td><td id="yellow-count">0</td></tr>
+              <tr><td>綠色</td><td id="green-count">0</td></tr>
+              <tr><td>破損</td><td id="broken-count">0</td></tr>
+              <tr><td>未知</td><td id="unknown-count">0</td></tr>
+              <tr><td>總數</td><td id="total-count">0</td></tr>
+              <tr><td>良好率</td><td id="good-rate">0%</td></tr>
+            </tbody>
+          </table>
+          <!-- ⏱️ 辨識歷史紀錄 -->
+      <div class="card mb-4">
+        <div class="card-header bg-success text-white">⏱️ 辨識歷史紀錄</div>
+        <div class="card-body">
+          <table class="table table-striped table-hover">
+            <thead class="table-info"><tr><th>#</th><th>物件</th><th>數量</th><th>時間</th></tr></thead>
+            <tbody id="history-table"><tr><td colspan="4">尚無紀錄</td></tr></tbody>
+          </table>
         </div>
       </div>
 
-      <!-- 主要內容區塊 -->
-      <div class="row gx-4 gy-4">
-        <!-- 左側：影像顯示 -->
-        <div class="col-md-8">
-          <div class="card shadow-sm h-100">
-            <div class="card-header bg-dark text-white">
-              🎥 即時影像
-            </div>
-            <div class="card-body text-center">
-              <img id="video-feed" src="" alt="攝影機影像" class="img-fluid rounded border border-2" style="max-height: 400px;">
-            </div>
-          </div>
-        </div>
-
-        <!-- 右側：控制與統計 -->
-        <div class="col-md-4">
-          <!-- 系統控制 -->
-          <div class="card shadow-sm mb-4">
-            <div class="card-header bg-primary text-white">
-              🕹️ 系統控制
-            </div>
-            <div class="card-body text-center">
-              <button id="startBtn" class="btn btn-success me-2 mb-2"><i class="bi bi-play-fill me-1"></i>啟動</button>
-              <button id="stopBtn" class="btn btn-danger mb-2"><i class="bi bi-stop-fill me-1"></i>停止</button>
-            </div>
-          </div>
-
-          <!-- 物件統計 -->
-          <div class="card shadow-sm mb-4">
-            <div class="card-header bg-warning text-dark">
-              📦 物件統計
-            </div>
-            <div class="card-body p-0">
-              <table class="table table-bordered mb-0 text-center">
-                <thead class="table-light">
-                  <tr><th>類型</th><th>數量</th></tr>
-                </thead>
-                <tbody id="object-counts">
-                  <tr><td class="text-danger">紅色</td><td id="red-count">0</td></tr>
-                  <tr><td class="text-primary">藍色</td><td id="blue-count">0</td></tr>
-                  <tr><td class="text-warning">黃色</td><td id="yellow-count">0</td></tr>
-                  <tr><td class="text-success">綠色</td><td id="green-count">0</td></tr>
-                  <tr><td class="text-muted">破損</td><td id="broken-count">0</td></tr>
-                  <tr><td class="text-secondary">未知</td><td id="unknown-count">0</td></tr>
-                  <tr class="fw-bold"><td>總數</td><td id="total-count">0</td></tr>
-                  <tr class="fw-bold"><td>良好率</td><td id="good-rate">0%</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- 辨識歷史 -->
-          <div class="card shadow-sm mb-4">
-            <div class="card-header bg-success text-white">
-              ⏱️ 辨識歷史紀錄
-            </div>
-            <div class="card-body p-0">
-              <table class="table table-striped table-hover mb-0 text-center">
-                <thead class="table-success">
-                  <tr><th>#</th><th>物件</th><th>數量</th><th>時間</th></tr>
-                </thead>
-                <tbody id="history-table">
-                  <tr><td colspan="4">尚無紀錄</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- 統計圖表 -->
-          <div class="card shadow-sm">
-            <div class="card-header bg-info text-white">
-              📈 即時統計圖表
-            </div>
-            <div class="card-body">
-              <canvas id="bar-chart" height="200"></canvas>
-            </div>
-          </div>
+      <!-- 📈 即時統計圖表 -->
+      <div class="card mb-4">
+        <div class="card-header bg-info text-white">📈 即時統計圖表</div>
+        <div class="card-body"><canvas id="bar-chart" height="200"></canvas></div>
+      </div>
+    </div>
         </div>
       </div>
     </div>
-    <!-- 系統頁面尾 -->
-
 
     <!-- 統計分析頁面 -->
     <div id="system1" class="page">

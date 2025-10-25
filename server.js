@@ -31,6 +31,11 @@ function connectPythonSocket() {
         io.emit('object_counts', data);
     });
 
+    socket.on('voice_status', (data) => {
+        console.log('收到目前語音輸入狀況:', data);
+        io.emit('voice_status', data);
+    });
+
     socket.on('connect_error', (error) => {
         console.error('Socket.IO 連線錯誤:', error.message);
     });
@@ -43,6 +48,17 @@ function connectPythonSocket() {
 
 io.on('connection', (socket) => {
     console.log('前端已連線，Socket ID:', socket.id);
+
+    socket.on('Recorder_control', (data) => {
+        console.log('收到語音控制指令:', data);
+        if (pythonSocket && pythonSocket.connected) {
+            pythonSocket.emit('Recorder_control', data);
+            console.log('已將語音控制指令發送到 Python 後端');
+        } else {
+            console.log('Python Socket.IO 未連接，無法發送控制指令');
+        }
+    });
+
 
     socket.on('control', (data) => {
         console.log('收到前端控制指令:', data);

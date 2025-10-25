@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>機械手臂控制系統</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: 'DFKai-SB', '標楷體', serif;
+      font-size: 1.5rem;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      margin-bottom: 0.5rem;
+      text-align: center;
+    }
+
+    h3 {
+      font-size: 2rem;
+      margin-top: 1.5rem;
+      text-align: center;
+    }
+
+    #video-feed {
+      width: 100%;
+      max-width: 640px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .btn {
+      font-size: 1.9rem;
+      padding: 1rem 2rem;
+    }
+
+    table th,
+    table td {
+      font-size: 1.8rem;
+    }
+
+    .page {
+      display: none;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    .highlight-oval {
+      display: inline-block;
+      background-color: #ffe066;
+      border-radius: 50px;
+      padding: .5rem 1.5rem;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- 導覽列 -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#"><i class="bi bi-robot me-2"></i><strong>機械手臂控制系統</strong></a>
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item"><a class="nav-link active" href="#" onclick="showPage('home')">首頁</a></li>
+        <li class="nav-item"><a class="nav-link" href="#" onclick="showPage('system')">系統</a></li>
+        <li class="nav-item"><a class="nav-link" href="#" onclick="showPage('system1')">統計分析</a></li>
+      </ul>
+    </div>
+  </nav>
+  <!-- 導覽列尾 -->
+
+
+  <div class="container mt-4">
+    <!-- 首頁 -->
+    <div id="home" class="page active container py-5">
+      <div class="text-center mb-5">
+        <h1 class="display-5 fw-bold text-primary mb-3">
+          歡迎使用機械手臂控制系統
+        </h1>
+        <p class="lead text-secondary">
+          本系統可即時顯示影像、統計各類物件數量，並透過按鈕遠端控制機械手臂運作。
+        </p>
+      </div>
+
+      <div class="row text-center">
+        <!-- 1. 即時影像 -->
+        <div class="col-md-4 mb-4">
+          <a href="#" class="text-decoration-none" onclick="showPage('system')">
+            <div class="card h-100 shadow-sm hover-shadow">
+              <div class="card-body">
+                <i class="bi bi-camera-video display-4 text-primary mb-3"></i>
+                <h5 class="card-title">即時影像顯示</h5>
+                <p class="card-text text-muted">清楚呈現即時監控畫面，便於追蹤作業情況。</p>
+              </div>
+            </div>
+          </a>
+        </div>
+
+        <!-- 2. 物件辨識 -->
+        <div class="col-md-4 mb-4">
+          <a href="#" class="text-decoration-none" onclick="showPage('system1')">
+            <div class="card h-100 shadow-sm hover-shadow">
+              <div class="card-body">
+                <i class="bi bi-bar-chart-line display-4 text-success mb-3"></i>
+                <h5 class="card-title">物件自動辨識與統計</h5>
+                <p class="card-text text-muted">智慧化分析與分類辨識，大幅提升效率。</p>
+              </div>
+            </div>
+          </a>
+        </div>
+
+        <!-- 3. 控制功能 -->
+        <div class="col-md-4 mb-4">
+          <a href="#" class="text-decoration-none" onclick="howPage('system')">
+            <div class="card h-100 shadow-sm hover-shadow">
+              <div class="card-body">
+                <i class="bi bi-cpu display-4 text-danger mb-3"></i>
+                <h5 class="card-title">啟動與停止機械手臂</h5>
+                <p class="card-text text-muted">遠端控制機械手臂運作，支援即時命令。</p>
+              </div>
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- 首頁尾 -->
+
+
+    <!-- 系統頁面 -->
+    <div id="system" class="page container">
+      <!-- 標題 -->
+      <div class="text-center">
+        <div class="bg-light rounded-pill d-inline-block px-4  shadow-sm mb-3">
+          <h1 class="text-primary mt-2 mb-2"><i class="bi bi-gear-fill me-3"></i>控制系統介面</h1>
+        </div>
+      </div>
+
+      <!-- 主要內容區塊 -->
+      <div class="row gx-4 gy-4 align-items-start">
+        <!-- 左側：影像顯示 -->
+        <div class="col-md-7">
+          <div class="card shadow-sm h-100">
+            <div class="card-header bg-dark text-white">
+              🎥 即時影像
+            </div>
+            <div class="card-body text-center">
+              <img id="video-feed" src="" alt="攝影機影像" class="img-fluid rounded border border-2"
+                style="max-width: 90%; max-height: 300px;">
+            </div>
+          </div>
+
+
+          <!-- 控制區放在攝影機下方 -->
+          <div class="card shadow-sm mt-4">
+            <div class="card-header bg-primary text-white">🕹️ 系統控制</div>
+            <div class="card-body text-center">
+              <div class="row">
+                <div class="col-md-4">
+                  <button id="startBtn" class="btn btn-success me-2 mb-2">
+                  <i class="bi bi-play-fill me-1"></i>啟動
+                  </button>
+                  <button id="stopBtn" class="btn btn-danger mb-2">
+                    <i class="bi bi-stop-fill me-1"></i>停止
+                  </button>
+                </div>
+                <div class="col-md-8">
+                  <button id="voiceBtn" class="btn btn-info mt-3">
+                  <i class="bi bi-mic-fill me-1"></i>語音指令
+                  </button>
+                  <p id="recognized-text" class="mt-2 fw-bold text-primary"></p>
+                  <small id="voice-status" class="text-muted">點擊按鈕開始語音辨識</small>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 右側：統計與歷史 -->
+        <div class="col-md-5">
+
+
+          <!-- 物件統計 -->
+          <div class="card shadow-sm mb-4">
+            <div class="card-header bg-warning text-dark">
+              📦 物件統計
+            </div>
+            <div class="card-body p-0">
+              <table class="table table-bordered mb-0 text-center">
+                <thead class="table-light">
+                  <tr>
+                    <th>類型</th>
+                    <th>數量</th>
+                  </tr>
+                </thead>
+                <tbody id="object-counts">
+                  <tr>
+                    <td class="text-danger">紅色</td>
+                    <td id="red-count">0</td>
+                  </tr>
+                  <tr>
+                    <td class="text-primary">藍色</td>
+                    <td id="blue-count">0</td>
+                  </tr>
+                  <tr>
+                    <td class="text-warning">黃色</td>
+                    <td id="yellow-count">0</td>
+                  </tr>
+                  <tr>
+                    <td class="text-success">綠色</td>
+                    <td id="green-count">0</td>
+                  </tr>
+                  <tr>
+                    <td class="text-muted">破損</td>
+                    <td id="broken-count">0</td>
+                  </tr>
+                  <tr>
+                    <td class="text-secondary">未知</td>
+                    <td id="unknown-count">0</td>
+                  </tr>
+                  <tr class="fw-bold">
+                    <td>總數</td>
+                    <td id="total-count">0</td>
+                  </tr>
+                  <tr class="fw-bold">
+                    <td>良好率</td>
+                    <td id="good-rate">0%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- 統計圖放最上方 -->
+          <div class="card shadow-sm mb-4">
+            <div class="card-header bg-info text-white">📈 即時統計圖表</div>
+            <div class="card-body">
+              <canvas id="bar-chart" height="180"></canvas>
+            </div>
+          </div>
+
+          <!-- 辨識歷史 -->
+          <div class="card shadow-sm mb-4">
+            <div class="card-header bg-success text-white">
+              ⏱️ 辨識歷史紀錄
+            </div>
+            <div class="card-body p-0">
+              <table class="table table-striped table-hover mb-0 text-center">
+                <thead class="table-success">
+                  <tr>
+                    <th>#</th>
+                    <th>物件</th>
+                    <th>數量</th>
+                    <th>時間</th>
+                  </tr>
+                </thead>
+                <tbody id="history-table">
+                  <tr>
+                    <td colspan="4">尚無紀錄</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+    <!-- 系統頁面尾 -->
+
+
+    <!-- 統計分析頁面 -->
+    <div id="system1" class="page">
+      <!-- ⏱️ 辨識歷史紀錄 -->
+      <div class="card mb-4">
+        <div class="card-header bg-success text-white">⏱️ 辨識歷史紀錄</div>
+        <div class="card-body">
+          <table class="table table-striped table-hover">
+            <thead class="table-info">
+              <tr>
+                <th>#</th>
+                <th>物件</th>
+                <th>數量</th>
+                <th>時間</th>
+              </tr>
+            </thead>
+            <tbody id="history-table">
+              <tr>
+                <td colspan="4">尚無紀錄</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 📈 即時統計圖表 -->
+      <div class="card mb-4">
+        <div class="card-header bg-info text-white">📈 即時統計圖表</div>
+        <div class="card-body"><canvas id="bar-chart" height="200"></canvas></div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.8.1/dist/socket.io.min.js"></script>
+  <script>
+
+    // 紀錄目前是否正在錄音的狀態
+    let isRecording = false;
+
+    function showPage(id) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      document.querySelectorAll('.nav-link').forEach(a => a.classList.remove('active'));
+      document.querySelector(`[onclick="showPage('${id}')"]`).classList.add('active');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const socket = io('http://localhost:3000');
+
+      const voiceBtn = document.getElementById('voiceBtn');
+      const voiceStatusElem = document.getElementById('voice-status');
+      const recognizedTextElem = document.getElementById('recognized-text');
+
+      // 接收來自後端的影像幀
+      socket.on('frame', data => {
+        if (typeof data === 'string' && data.length)
+          document.getElementById('video-feed').src = `data:image/jpeg;base64,${data}`;
+      });
+
+
+      // 接收來自後端的語音辨識狀態
+      // 這裡會顯示辨識結果，但不影響其他手動按鈕
+      socket.on('voice_status', data => {
+        // 語音辨識完成後，重置語音按鈕狀態
+        isRecording = false;
+        voiceBtn.classList.remove('btn-danger');
+        voiceBtn.classList.add('btn-info');
+        voiceBtn.innerHTML = '<i class="bi bi-mic-fill me-1"></i>語音指令';
+
+        // 根據後端回傳的數據，顯示辨識結果或錯誤訊息
+        if (data.text) {
+          recognizedTextElem.textContent = data.text;
+          voiceStatusElem.textContent = data.command;
+        } else {
+          recognizedTextElem.textContent = '未辨識到有效指令';
+          voiceStatusElem.textContent = '請再試一次。';
+        }
+      });
+
+      // Chart.js 初始化
+      const ctx = document.getElementById('bar-chart').getContext('2d');
+      const barChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['紅色', '藍色', '黃色', '綠色', '破損', '未知'],
+          datasets: [{
+            label: '物件數量',
+            backgroundColor: ['#f66', '#66f', '#ff6', '#6f6', '#999', '#ccc'],
+            data: [0, 0, 0, 0, 0, 0]
+          }]
+        },
+        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+      });
+
+      const history = [];
+      const updateHistory = (label, count) => {
+        history.unshift({ label, count, time: new Date().toLocaleTimeString() });
+        if (history.length > 10) history.pop();
+        const tb = document.querySelectorAll('[id="history-table"]')
+        tb.innerHTML = '';
+        history.forEach((r, i) => {
+          const row = `<tr><td>${i + 1}</td><td>${r.label}</td><td>${r.count}</td><td>${r.time}</td></tr>`;
+          tb.innerHTML += row;
+        });
+      };
+
+      socket.on('object_counts', data => {
+        ['red', 'blue', 'yellow', 'green', 'broken', 'unknown'].forEach((k, i) => {
+          document.getElementById(`${k}-count`).textContent = data.counts[k] || 0;
+          barChart.data.datasets[0].data[i] = data.counts[k] || 0;
+        });
+        document.getElementById('total-count').textContent = data.total;
+        document.getElementById('good-rate').textContent = `${data.good_rate}%`;
+        barChart.update();
+        updateHistory('總數', data.total);
+      });
+
+      socket.on('prediction_data', results => {
+        const tb = document.querySelectorAll('[id="prediction-table"]')
+        // const tb = document.getElementById('prediction-table');
+        tb.innerHTML = '';
+        if (!results.length) return tb.innerHTML = '<tr><td colspan="3">無資料</td></tr>';
+        results.forEach(o => {
+          const row = `<tr><td>${o.label}</td><td>${(o.confidence * 100).toFixed(1)}%</td><td>(${o.x},${o.y},${o.w},${o.h})</td></tr>`;
+          tb.innerHTML += row;
+        });
+      });
+
+      document.getElementById('startBtn').onclick = () => socket.emit('control', { command: 'start' });
+      document.getElementById('stopBtn').onclick = () => socket.emit('control', { command: 'stop' });
+
+      // 點擊語音指令按鈕時的事件
+      voiceBtn.onclick = () => {
+        // const voiceBtn = document.getElementById('voiceBtn');
+        // const voiceStatusElem = document.getElementById('voice-status');
+        // const recognizedTextElem = document.getElementById('recognized-text');
+
+        if (isRecording) {
+          // 如果正在錄音，則停止錄音並發送指令
+          isRecording = false;
+          voiceStatusElem.textContent = '點擊按鈕開始語音辨識';
+          recognizedTextElem.textContent = ''; // 清空先前的辨識結果
+          voiceBtn.classList.remove('btn-danger');
+          voiceBtn.classList.add('btn-info');
+          voiceBtn.innerHTML = '<i class="bi bi-mic-fill me-1"></i>語音指令'; // 按鈕文字變回「語音指令」
+          socket.emit('Recorder_control', { command: 'voice_stop_record' });
+
+        } else {
+          // 如果沒有錄音，則開始錄音
+          isRecording = true;
+          voiceStatusElem.textContent = '錄音中...請說話';
+          recognizedTextElem.textContent = ''; // 清空先前的辨識結果
+          voiceBtn.classList.remove('btn-info');
+          voiceBtn.classList.add('btn-danger');
+          voiceBtn.innerHTML = '<i class="bi bi-mic-fill me-1"></i>停止錄音'; // 按鈕文字變成「停止錄音」
+          socket.emit('Recorder_control', { command: 'voice_start_record' });
+        }
+      };
+
+      // // === 測試資料模擬送入 ===
+      // setTimeout(() => {
+      //   const testData = {
+      //     counts: { red: 12, blue: 8, yellow: 15, green: 5, broken: 2, unknown: 1 },
+      //     total: 43,
+      //     good_rate: 90
+      //   };
+      //   // 更新物件數量和圖表
+      //   ['red','blue','yellow','green','broken','unknown'].forEach((k,i) => {
+      //     document.getElementById(`${k}-count`).textContent = testData.counts[k] || 0;
+      //     barChart.data.datasets[0].data[i] = testData.counts[k] || 0;
+      //   });
+      //   document.getElementById('total-count').textContent = testData.total;
+      //   document.getElementById('good-rate').textContent = `${testData.good_rate}%`;
+      //   barChart.update();
+
+      //   // 模擬加入歷史資料幾筆
+      //   updateHistory('總數', testData.total);
+      //   updateHistory('紅色', testData.counts.red);
+      //   updateHistory('藍色', testData.counts.blue);
+      //   updateHistory('黃色', testData.counts.yellow);
+      // }, 1000);
+    });
+  </script>
+</body>
+
+</html>

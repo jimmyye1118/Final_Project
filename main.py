@@ -6,6 +6,7 @@ import signal
 import sys
 from flask import Flask
 from flask_socketio import SocketIO
+import queue  # ⬅️ 1. 導入 queue
 
 from function.voice_recognizer import VoiceRecognizer
 from function.dobot_controller import DobotController
@@ -26,17 +27,23 @@ voice_recognizer = VoiceRecognizer() # 初始化語音辨識模組
 # 控制變數
 running = True
 flag_start_work = False
+grab_option = 1  # 預設夾取選項，定點夾取
 color_state = "None"
 state = "None"
 SLEEP_TIME = 0  # 移除不必要的延遲
 CONVEYOR_SPEED = 50  # 例如：每秒 50 pixel
-PREDICTION_TIME = 0.87871  # 精確的預判時間：0.87871 秒
+PREDICTION_TIME = 3.97  # 精確的預判時間：3.97 秒
 PICKUP_DELAY = 0.87871  # 到達指定位置的時間：0.87871 秒
 noweb_mode = False  # 新增：noweb 模式標記
 
-# 處理中的物件記錄（避免重複處理）
-processed_objects = set()
-processing_lock = threading.Lock()
+# (NEW) 生產者-消費者 佇列
+grab_queue = queue.Queue()
+
+# (NEW) 簡易物件追蹤 (用於偵測跨線)
+previous_frame_objects = {} # 儲存 { id: {'center': (cx, cy), 'class': 'blue'} }
+next_object_id = 0
+DETECTION_LINE_Y = 200      # 設定「偵測線」Y 座標
+TRACKING_MAX_DIST = 65      # 追蹤時，兩幀之間允許的最大像素距離(可能之後再改，但不影響)
 
 # 根據是否為 noweb 模式初始化 counter
 if len(sys.argv) > 1 and sys.argv[1] == "noweb":
@@ -47,82 +54,94 @@ else:
     counter = ObjectCounter(socketio)
     print("🌐 啟動 web 模式")
 
-def get_object_id(obj):
-    """生成物件唯一ID（基於位置和類別）"""
-    cX, cY = obj['center']
-    class_name = obj['class']
-    # 使用粗略位置避免微小位移造成的重複ID
-    rough_x = round(cX / 20) * 20
-    rough_y = round(cY / 20) * 20
-    return f"{class_name}_{rough_x}_{rough_y}"
+#4. 加入新的「消費者」執行緒 (grabber_thread_worker)
+def grabber_thread_worker():
+    """
+    (NEW) 消費者執行緒
+    專門從 grab_queue 拿任務，並呼叫 dobot 執行 (會阻塞)
+    """
+    global running, dobot, audio, PREDICTION_TIME
+    
+    print("🤖 夾取執行緒 (Consumer) 啟動... 等待任務...")
+    
+    while running:
+        try:
+            # get() 會自動阻塞 (睡著)，直到 queue 裡有東西
+            # 拿到任務的同時，任務就從 queue 中 "移除" 了
+            item = grab_queue.get() 
+            
+            if item is None:
+                continue
 
-def process_object_async(obj, detection_time):
-    """異步處理物件（避免阻塞主迴圈）"""
-    global processed_objects
-    
-    cX, cY = obj['center']
-    class_name = obj['class']
-    obj_id = get_object_id(obj)
-    
-    # 檢查是否已經處理過
-    with processing_lock:
-        if obj_id in processed_objects:
-            return
-        processed_objects.add(obj_id)
-    
-    try:
-        print(f"🎯 開始處理物件: {class_name} at ({cX}, {cY})")
-        
-        # 計算預判位置
-        time_elapsed = time.time() - detection_time
-        predicted_cY = cY - CONVEYOR_SPEED * (PREDICTION_TIME + time_elapsed)
-        
-        print(f"📍 預判位置: ({cX}, {predicted_cY:.2f}), 延遲: {time_elapsed:.3f}s")
-        
-        # 只在有 counter 時更新計數
-        if counter is not None:
-            counter.update_counts(class_name)
-        
-        # 等待到達最佳夾取時機
-        wait_time = PICKUP_DELAY - time_elapsed
-        if wait_time > 0:
-            print(f"⏳ 等待 {wait_time:.3f} 秒到達最佳夾取位置")
-            time.sleep(wait_time)
-        
-        # 處理不同顏色的物件
-        if class_name in ['blue', 'yellow', 'green', 'red']:
-            color_state = class_name
+            class_name = item['class']
+            cross_time = item['cross_time']
+            cross_x = item['cross_x'] # 拿到當時的 X 座標
+            cross_y = item['cross_y'] # 拿到當時的 Y 座標]
             
-            # 播放對應音效（非阻塞）
-            audio_map = {'blue': 11, 'yellow': 12, 'green': 13, 'red': 14}
+            print(f"📦 [Consumer] 收到任務: {class_name}, 在 {cross_x} 跨線")
+
+            # 1. 計算已經過了多久
+            time_elapsed = time.time() - cross_time
+            
+            # 2. 我們還需要再等多久 (從偵測線到夾取點)
+            wait_time = max(0, PREDICTION_TIME - time_elapsed)
+            
+            if wait_time > 0:
+                print(f"⏳ [Consumer] 預判等待 {wait_time:.3f} 秒...")
+                time.sleep(wait_time)
+            
+            # 3. 時間到，執行夾取 (呼叫我們在 dobot_controller 新增的函數)
+            print(f"🤖 [Consumer] 時間到！執行夾取: {class_name}")
+            
+            # 播放音效
+            if class_name in ['blue', 'yellow', 'green', 'red']:
+                audio_map = {'blue': 11, 'yellow': 12, 'green': 13, 'red': 14}
+                audio.speak(audio_map[class_name])
+                
+                # 呼叫新的、只管夾取的函數
+                dobot.perform_predicted_grab(cross_x,cross_y, class_name, 8)
+            
+            elif class_name == 'broken':
+                print("🔧 [Consumer] 處理破損物件 (跳過夾取)")
+                audio.speak(16)
+                # 破損物件，我們決定不夾，讓它流走
+                # 如果要連輸送帶都停，邏輯會更複雜
+            
+        except Exception as e:
+            print(f"❌ 夾取執行緒 (Consumer) 發生錯誤: {e}")
+
+# 定點夾取
+def process_object_fixed(model_objects, unknown_objects):
+    """定點夾取處理函數"""
+    
+    for obj in model_objects:
+        cX, cY = obj['center']
+        class_name = obj['class']
+        counter.update_counts(class_name)
+        
+        print(f"🎯 定點夾取: {class_name} at ({cX},{cY})")
+        audio_map = {'blue': 11, 'yellow': 12, 'green': 13, 'red': 14}
+        
+        if class_name in audio_map:
             audio.speak(audio_map[class_name])
-            
-            # 執行夾取動作
-            print(f"🤖 執行夾取: {class_name}")
-            dobot.dobot_work(cX, predicted_cY, class_name, 8)
-            
+            time.sleep(0.8)
+            dobot.dobot_fixed_work(cX, cY, class_name, 8)
         elif class_name == 'broken':
-            print("🔧 處理破損物件")
             audio.speak(16)
-            dobot.run_conveyor()
-            
-        print(f"✅ 物件處理完成: {class_name}")
-        
-    except Exception as e:
-        print(f"❌ 處理物件時發生錯誤: {e}")
-    finally:
-        # 清理處理記錄（一段時間後）
-        def cleanup_processed_id():
-            time.sleep(10)  # 10秒後清理
-            with processing_lock:
-                if obj_id in processed_objects:
-                    processed_objects.discard(obj_id)
-        
-        threading.Thread(target=cleanup_processed_id, daemon=True).start()
+            dobot.run_fixed_conveyor()
+            time.sleep(3) # 確保動作完成
+    for obj in unknown_objects:
+        print("🚨 定點異物處理中...")
+        counter.update_counts('unknown')
+        audio.speak(15)
+        dobot.run_fixed_conveyor()
+        time.sleep(1.5)
+
 
 def main_loop():
     """主迴圈（非阻塞）"""
-    global running, flag_start_work, counter
+    global running, flag_start_work, counter,grab_option
+    global previous_frame_objects, next_object_id, DETECTION_LINE_Y, grab_queue # (NEW)
     print("主迴圈啟動")
     
     # 初始化Dobot
@@ -130,11 +149,11 @@ def main_loop():
     
     # noweb 模式自動開始工作
     if noweb_mode:
-        print("noweb 模式：自動開始工作")
+        print("noweb 模式：自動開始工作 (預設為定點)")
         flag_start_work = True
+        grab_option = 1 # noweb 預設
     
     frame_count = 0
-    last_detection_time = time.time()
 
     while running:
         try:
@@ -156,46 +175,79 @@ def main_loop():
 
             # 如果開始工作模式
             if flag_start_work:
-                # 處理已知物件
-                if model_objects:
-                    last_detection_time = current_time
-                    print(f"🔍 檢測到 {len(model_objects)} 個物件")
-                    
-                    # 按X座標排序（處理最前面的物件）
-                    model_objects.sort(key=lambda x: x['center'][0])
-                    
-                    # 異步處理每個物件
-                    for obj in model_objects:
-                        threading.Thread(
-                            target=process_object_async, 
-                            args=(obj, current_time), 
-                            daemon=True
-                        ).start()
                 
-                # 處理未知物件
-                if unknown_objects:
-                    print(f"⚠️ 檢測到 {len(unknown_objects)} 個未知物件")
-                    for obj in unknown_objects:
-                        obj_id = get_object_id(obj)
+                # -----------------------------------------------
+                # 模式一：定點夾取 
+                # -----------------------------------------------
+                if grab_option == 1:
+                    model_objects.sort(key=lambda x: x['center'][0])
+                    unknown_objects.sort(key=lambda x: x['center'][0])
+                    process_object_fixed(model_objects, unknown_objects)
+                    
+                # -----------------------------------------------
+                # 模式二：移動夾取 
+                # -----------------------------------------------
+                elif grab_option == 2:
+                    
+                    current_frame_objects = {} # 儲存 { id: {'center':(cx,cy), 'class':'blue'} }
+                    
+                    # 1. 整理這一幀的物件，並嘗試匹配上一幀的 ID
+                    for obj in model_objects:
+                        (cX, cY) = obj['center']
+                        best_match_id = -1
+                        min_dist = TRACKING_MAX_DIST # 最大允許距離
                         
-                        with processing_lock:
-                            if obj_id not in processed_objects:
-                                processed_objects.add(obj_id)
+                        for obj_id, prev_obj in previous_frame_objects.items():
+                            dist = abs(cX - prev_obj['center'][0]) + abs(cY - prev_obj['center'][1])
+                            if dist < min_dist:
+                                min_dist = dist
+                                best_match_id = obj_id
+                        
+                        if best_match_id != -1:
+                            # A. 找到匹配，沿用 ID
+                            current_frame_objects[best_match_id] = {'center': (cX, cY), 'class': obj['class']}
+                            
+                            # 檢查跨線事件
+                            prev_y = previous_frame_objects[best_match_id]['center'][1]
+                            if prev_y >= DETECTION_LINE_Y and cY < DETECTION_LINE_Y:
+                                # 跨線！
+                                print(f"📦 [Producer] 偵測到跨線: {obj['class']} (ID: {best_match_id})")
                                 
-                                if counter is not None:
-                                    counter.update_counts('unknown')
+                                # 檢查 (手臂是否空閒)
+                                if grab_queue.qsize() == 0: #物理條件限制
+                                    print("✅ [Producer] 手臂空閒，加入任務。")
+                                    
+                                    # 1. 計數 (只在這裡計數！)
+                                    if counter:
+                                        counter.update_counts(obj['class'])
+                                        
+                                    # 2. "記錄" (丟進 queue)
+                                    task = {
+                                        'class': obj['class'],
+                                        'cross_time': current_time,
+                                        'cross_x': cX,  # 記錄 "跨線時" 的 X 座標
+                                        'cross_y': cY   # 記錄 "跨線時" 的 Y 座標
+                                    }
+                                    grab_queue.put(task)
                                 
-                                print("🚨 檢測到異物，處理中...")
-                                audio.speak(15)
+                                else:
+                                    # 手臂還在忙！
+                                    print(f"⚠️ [Producer] 手臂忙碌中 (Queue: {grab_queue.qsize()})，跳過此物件！")
                                 
-                                # 異步處理異物
-                                def handle_unknown():
-                                    dobot.run_conveyor()
-                                
-                                threading.Thread(target=handle_unknown, daemon=True).start()
+                        else:
+                            # B. 找不到匹配，是新物件 (且還在線的上方)
+                            if cY >= DETECTION_LINE_Y:
+                                current_frame_objects[next_object_id] = {'center': (cX, cY), 'class': obj['class']}
+                                next_object_id += 1
+                    
+                    # 3. 更新 "上一幀" 列表，供下一輪比對
+                    previous_frame_objects = current_frame_objects.copy()   
+                    
+                    
 
             # 顯示影像
             cv2.imshow("camera_input", frame)
+            socketio.sleep(0.1)  # 控制 WebSocket 傳輸頻率
             
             # 處理 OpenCV 視窗事件
             key = cv2.waitKey(1) & 0xFF
@@ -205,15 +257,11 @@ def main_loop():
                 break
             elif key == ord('s') and noweb_mode:
                 flag_start_work = True
+                grab_option = 1  # 預設為定點夾取
                 print("🟢 開始工作")
             elif key == ord('p') and noweb_mode:
                 flag_start_work = False
                 print("🔴 暫停工作")
-            elif key == ord('r') and noweb_mode:
-                # 重置處理記錄
-                with processing_lock:
-                    processed_objects.clear()
-                print("🔄 重置處理記錄")
             
             # 顯示運行狀態
             if frame_count % 100 == 0:  # 每100幀顯示一次狀態
@@ -227,20 +275,24 @@ def main_loop():
                 socketio.sleep(0.03)
                 
         except Exception as e:
-            print(f"❌ 主迴圈錯誤: {e}")
+            print(f"❌ 主迴圈錯誤: {e}")    
             time.sleep(0.1)
 
     # 清理
     cleanup()
-
+    
 def cleanup():
     """清理函數"""
     global running
     running = False
     print("🧹 開始清理資源...")
+    
+    # 停止消費者執行緒 (透過
+    grab_queue.put(None) 
+    
     cv2.destroyAllWindows()
     vision.release()
-    dobot.disconnect()
+    dobot.disconnect() # disconnect 裡面會自動呼叫 stop_conveyor
     print("✅ 程式已清理並結束")
 
 def signal_handler(sig, frame):
@@ -252,24 +304,51 @@ def signal_handler(sig, frame):
 # 接收前端控制指令（只在 web 模式下使用）
 @socketio.on('control')
 def handle_control(data):
-    global flag_start_work
+    global flag_start_work, grab_option, previous_frame_objects, next_object_id
     command = data.get('command')
     print(f"📡 收到控制指令: {command}")
     if command == 'start':
         flag_start_work = True
-        print("🟢 GO Work")
+        grab_option = 1  # 設定為定點夾取
+        print("🟢 GO Work定點夾取")
+        with grab_queue.mutex:
+            grab_queue.queue.clear()
+    elif command == 'move_grasp':
+        flag_start_work = True
+        grab_option = 2
+        print("🟡 移動夾取選項已選擇")
+        # (清空 queue 和追蹤器)
+        with grab_queue.mutex:
+            grab_queue.queue.clear()
+        previous_frame_objects.clear()
+        next_object_id = 0
+        
+        # 啟動輸送帶
+        dobot.start_conveyor()
+        
     elif command == 'stop':
         flag_start_work = False
         print("🔴 Finish")
+        
+        # 關鍵：停止輸送帶
+        dobot.stop_conveyor()
+        
+        # (清空 queue)
+        with grab_queue.mutex:
+            grab_queue.queue.clear()
+
     elif command == 'reset':
-        with processing_lock:
-            processed_objects.clear()
-        print("🔄 重置處理記錄")
+        # (清空 queue 和追蹤器)
+        with grab_queue.mutex:
+            grab_queue.queue.clear()
+        previous_frame_objects.clear()
+        next_object_id = 0
+        print("🔄 重置佇列與追蹤器")
 
 
 @socketio.on('Recorder_control')
 def handle_recorder_control(data):
-    global voice_recognizer, flag_start_work
+    global voice_recognizer, flag_start_work, grab_option
     command = data.get('command')
     print(f"收到語音錄音指令: {command}")
 
@@ -287,18 +366,25 @@ def handle_recorder_control(data):
             # 根據語音辨識結果執行動作
             if recognized_command == 'start':
                 flag_start_work = True
+                grab_option = 1  # 設定為定點夾取
+                print("🟢 GO Work定點夾取")
+                with grab_queue.mutex:
+                    grab_queue.queue.clear()
                 print("語音指令：啟動工作")
-                audio.speak("開始工作") # 可以加入語音回饋
+                
             elif recognized_command == 'stop':
                 flag_start_work = False
-                print("語音指令：停止工作")
-                audio.speak("工作已停止") # 可以加入語音回饋
+                print("🔴 Finish")
+        
+                # 關鍵：停止輸送帶
+                dobot.stop_conveyor()
+        
+                # (清空 queue)
+                with grab_queue.mutex:
+                    grab_queue.queue.clear()
             elif recognized_command in ['red', 'blue', 'yellow', 'green']:
                 # 這裡可以根據顏色指令執行機械手臂的特定動作
                 print(f"語音指令: 執行 {recognized_command} 色分類動作")
-                audio.speak(f"已收到{recognized_command}色指令")
-                # dobot.dobot_work(..., recognized_command, ...)
-                # 注意：這裡僅為範例，實際執行動作需要物件資訊
             else:
                 print(f"語音指令 {recognized_command} 未對應到預設動作")
                 audio.speak("指令無法理解")
@@ -328,30 +414,19 @@ if __name__ == '__main__':
 
     print("=" * 50)
     print("🤖 機械手臂連續運行系統啟動")
+    # ... (其他 print 不變) ...
+    print(f"🧬 偵測線 Y 座標: {DETECTION_LINE_Y}")
     print("=" * 50)
-    print(f"📊 輸送帶速度: {CONVEYOR_SPEED} 像素/秒")
-    print(f"⏱️ 預判時間: {PREDICTION_TIME} 秒")
-    print(f"🎯 夾取延遲: {PICKUP_DELAY} 秒")
-    print(f"💤 睡眠時間: {SLEEP_TIME} 秒")
-    
-    if noweb_mode:
-        print("🔧 模式: noweb (無網頁介面)")
-        print("⌨️ 控制說明:")
-        print("   - 按 'q' 退出程式")
-        print("   - 按 's' 開始工作")
-        print("   - 按 'p' 暫停工作")
-        print("   - 按 'r' 重置處理記錄")
-        print("   - Ctrl+C 強制退出")
-    else:
-        print("🌐 模式: web (含網頁介面)")
-        print("🔗 WebSocket 埠號: 5000")
-    
-    print("=" * 50)
+
+    # ⬅️ 關鍵：在這裡啟動「消費者」執行緒
+    # 讓它在背景開始睡覺 (等待任務)
+    print("🚀 啟動消費者 (Grabber) 執行緒...")
+    threading.Thread(target=grabber_thread_worker, daemon=True).start()
 
     # 判斷是否傳入 "noweb" 模式
     if noweb_mode:
         try:
-            # 直接執行主迴圈，不開 Flask server
+            # noweb 模式，直接執行主迴圈
             main_loop()
         except KeyboardInterrupt:
             print("⚠️ 接收到 Ctrl+C，正在關閉程式...")

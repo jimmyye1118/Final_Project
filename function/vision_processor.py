@@ -12,10 +12,10 @@ class VisionProcessor:
     
     def _load_mask(self):
         """載入遮罩圖片"""
-        self.img_mask = cv2.imread("mask_v4.png")
+        self.img_mask = cv2.imread("mask_v5.png")
         if self.img_mask is None:
-            print("無法載入 mask2.png，檢查文件是否存在")
-    
+            print("無法載入 mask_v5.png，檢查文件是否存在")
+
     def adjust_gamma(self, image, gamma=1.0):
         """調整影像伽馬值"""
         invGamma = 1.0 / gamma
@@ -110,7 +110,9 @@ class VisionProcessor:
             x1, y1, x2, y2 = obj['bbox']
             cv2.rectangle(image, (x1, y1), (x2, y2), (255, 255, 255), 2)
             cv2.putText(image, obj['class'], (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
-    
+
+        # cv2.line(image, (0, 200), (480, 200), (0, 0, 255), 2) #####畫線測試######
+
     def release(self):
         """釋放攝影機資源"""
         if self.capture:

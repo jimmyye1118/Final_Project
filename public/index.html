@@ -164,15 +164,21 @@
             <div class="card-header bg-primary text-white">🕹️ 系統控制</div>
             <div class="card-body text-center">
               <div class="row">
-                <div class="col-md-4">
-                  <button id="startBtn" class="btn btn-success me-2 mb-2">
-                  <i class="bi bi-play-fill me-1"></i>啟動
+                <div class="col-md-5">
+
+                  <button id="startBtn" class="btn btn-success mb-2">
+                    <i class="bi bi-play-fill me-1"></i>定點夾取
                   </button>
+
+                  <button id="moveGraspBtn" class="btn btn-warning  mb-2">
+                    <i class="bi bi-arrows-move me-1"></i>移動夾取
+                  </button>
+
                   <button id="stopBtn" class="btn btn-danger mb-2">
-                    <i class="bi bi-stop-fill me-1"></i>停止
+                    <i class="bi bi-stop-fill me-1"></i>系統停止
                   </button>
                 </div>
-                <div class="col-md-8">
+                <div class="col-md-7">
                   <button id="voiceBtn" class="btn btn-info mt-3">
                   <i class="bi bi-mic-fill me-1"></i>語音指令
                   </button>
@@ -408,6 +414,8 @@
 
       document.getElementById('startBtn').onclick = () => socket.emit('control', { command: 'start' });
       document.getElementById('stopBtn').onclick = () => socket.emit('control', { command: 'stop' });
+      //移動夾取按鈕事件
+      document.getElementById('moveGraspBtn').onclick = () => socket.emit('control', { command: 'move_grasp' });
 
       // 點擊語音指令按鈕時的事件
       voiceBtn.onclick = () => {

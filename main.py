@@ -418,7 +418,7 @@ if __name__ == '__main__':
     print(f"🧬 偵測線 Y 座標: {DETECTION_LINE_Y}")
     print("=" * 50)
 
-    # ⬅️ 關鍵：在這裡啟動「消費者」執行緒
+    # 啟動「消費者」執行緒
     # 讓它在背景開始睡覺 (等待任務)
     print("🚀 啟動消費者 (Grabber) 執行緒...")
     threading.Thread(target=grabber_thread_worker, daemon=True).start()

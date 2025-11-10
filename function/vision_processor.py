@@ -5,14 +5,14 @@ from config import Video_num, kernel, color_map
 
 class VisionProcessor:
     def __init__(self):
-        self.model = YOLO("./Cube_Color_4_and_Defect_Model/V12_4_Color_Training12/weights/best.pt")
+        self.model = YOLO("./models/cube_model_v13.pt")
         self.capture = cv2.VideoCapture(Video_num)
         self.img_mask = None
         self._load_mask()
     
     def _load_mask(self):
         """載入遮罩圖片"""
-        self.img_mask = cv2.imread("mask_v5.png")
+        self.img_mask = cv2.imread("./images/mask_v5.png")
         if self.img_mask is None:
             print("無法載入 mask_v5.png，檢查文件是否存在")
 

@@ -1,11 +1,11 @@
 import numpy as np
 
 # 吸盤中心點調整
-X_Center = 349
-Y_Center = 278
+X_Center = 350
+Y_Center = 280
 
 # 影像編號
-Video_num = 1  # 修改為 0，測試是否正確
+Video_num = 0  # 修改為 0，測試是否正確
 # 亮度調整參數 0.1(暗)---0.9(亮)
 Gamma_Value = 0.6
 

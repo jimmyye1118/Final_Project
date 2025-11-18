@@ -5,7 +5,7 @@ from config import Video_num, kernel, color_map
 
 class VisionProcessor:
     def __init__(self):
-        self.model = YOLO("./models/cube_model_v13.pt")
+        self.model = YOLO("./models/cube_model_v14.pt")
         self.capture = cv2.VideoCapture(Video_num)
         self.img_mask = None
         self._load_mask()
@@ -29,6 +29,10 @@ class VisionProcessor:
             print("攝影機讀取失敗")
             return None, [], []
         
+        # 嘗試調暗影像，gamma < 1.0 (例如 0.75) 來壓制高光
+        cap_input = self.adjust_gamma(cap_input, gamma=0.75)        
+        
+        
         # print("原始影像尺寸:", cap_input.shape)
         
         # 應用遮罩
@@ -41,15 +45,15 @@ class VisionProcessor:
         
         # 處理HSV並找出contours
         hsv = cv2.cvtColor(cap_mask, cv2.COLOR_BGR2HSV)
-        lower_black = np.array([0, 0, 99])
-        upper_black = np.array([255, 255, 255])
+        lower_black = np.array([0, 40, 99])
+        upper_black = np.array([255, 255, 245])
         mask_black = cv2.inRange(hsv, lower_black, upper_black)
         mask_non_black = cv2.morphologyEx(mask_black, cv2.MORPH_OPEN, kernel)
         
         contours, _ = cv2.findContours(mask_non_black, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
         # YOLO模型檢測
-        results = self.model.track(cap_mask, persist=True, stream=True, conf=0.7)
+        results = self.model.track(cap_mask, persist=True, stream=True, conf=0.75, iou=0.3)
         model_detected_objects = []
         unknown_detected_objects = []
         

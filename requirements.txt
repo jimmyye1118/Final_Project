@@ -1,0 +1,10 @@
+Flask==2.3.2
+numpy==1.26.4
+torch==2.2.1
+torchvision==0.17.1
+opencv-python==4.8.1.78
+flask-socketio==5.3.7
+python-socketio==5.11.0
+eventlet==0.33.3
+ultralytics==8.0
+pygame==2.5.1
